@@ -7369,10 +7369,7 @@ void lcd_print_stop()
 
     planner_abort_hard(); //needs to be done since plan_buffer_line resets waiting_inside_plan_buffer_line_print_aborted to false. Also copies current to destination.
     
-    axis_relative_modes[X_AXIS] = false;
-    axis_relative_modes[Y_AXIS] = false;
-    axis_relative_modes[Z_AXIS] = false;
-    axis_relative_modes[E_AXIS] = true;
+    axis_relative_modes = E_AXIS_MASK; //XYZ absolute, E relative
     
     isPrintPaused = false; //clear isPrintPaused flag to allow starting next print after pause->stop scenario.
 }
@@ -7487,35 +7484,36 @@ void lcd_belttest_print(const char* msg, uint16_t X, uint16_t Y)
 }
 void lcd_belttest()
 {
-    int _progress = 0;
     bool _result = true;
+    
+    #ifdef TMC2130 // Belttest requires high power mode. Enable it.
+	    FORCE_HIGH_POWER_START;
+    #endif
+    
     uint16_t   X = eeprom_read_word((uint16_t*)(EEPROM_BELTSTATUS_X));
     uint16_t   Y = eeprom_read_word((uint16_t*)(EEPROM_BELTSTATUS_Y));
     lcd_belttest_print(_i("Checking X..."), X, Y);
 
-    _delay(2000);
     KEEPALIVE_STATE(IN_HANDLER);
-
+    
     _result = lcd_selfcheck_axis_sg(X_AXIS);
     X = eeprom_read_word((uint16_t*)(EEPROM_BELTSTATUS_X));
-    if (!_result){
-        lcd_belttest_print(_i("Error"), X, Y);
-        return;
+    if (_result){
+        lcd_belttest_print(_i("Checking Y..."), X, Y);
+        _result = lcd_selfcheck_axis_sg(Y_AXIS);
+        Y = eeprom_read_word((uint16_t*)(EEPROM_BELTSTATUS_Y));
     }
-
-    lcd_belttest_print(_i("Checking Y..."), X, Y);
-    _result = lcd_selfcheck_axis_sg(Y_AXIS);
-    Y = eeprom_read_word((uint16_t*)(EEPROM_BELTSTATUS_Y));
-
-    if (!_result){
+    
+    if (!_result) {
         lcd_belttest_print(_i("Error"), X, Y);
-        lcd_clear();
-        return;
-    }
+    } else {
+        lcd_belttest_print(_i("Done"), X, Y);
+    }   
 
-
-    lcd_belttest_print(_i("Done"), X, Y);
-
+    #ifdef TMC2130
+	    FORCE_HIGH_POWER_END;
+    #endif
+    
     KEEPALIVE_STATE(NOT_BUSY);
     _delay(3000);
 }
@@ -7601,10 +7599,7 @@ bool lcd_selftest()
 	#ifdef TMC2130
 	  FORCE_HIGH_POWER_START;
 	#endif // TMC2130
-//     _delay(2000);
-    
-    FORCE_BL_ON_START;
-    
+	FORCE_BL_ON_START;
 	_delay(2000);
 	KEEPALIVE_STATE(IN_HANDLER);
 
@@ -7876,9 +7871,7 @@ static bool lcd_selfcheck_axis_sg(unsigned char axis) {
 	enable_endstops(true);
 
 	if (axis == X_AXIS) { //there is collision between cables and PSU cover in X axis if Z coordinate is too low
-		
-		current_position[Z_AXIS] += 17;
-		plan_buffer_line_curposXYZE(manual_feedrate[0] / 60, active_extruder);
+		raise_z_above(17,true);
 		tmc2130_home_enter(Z_AXIS_MASK);
 		st_synchronize();
 		tmc2130_home_exit();
