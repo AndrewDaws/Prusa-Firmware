@@ -46,6 +46,7 @@
 //-//
 #include "Configuration.h"
 #include "Marlin.h"
+#include "config.h"
   
 #ifdef ENABLE_AUTO_BED_LEVELING
 #include "vector_3.h"
@@ -1891,10 +1892,6 @@ static void axis_is_at_home(int axis) {
   max_pos[axis] =          base_max_pos(axis) + cs.add_homing[axis];
 }
 
-
-inline void set_current_to_destination() { memcpy(current_position, destination, sizeof(current_position)); }
-inline void set_destination_to_current() { memcpy(destination, current_position, sizeof(destination)); }
-
 //! @return original feedmultiply
 static int setup_for_endstop_move(bool enable_endstops_now = true) {
     saved_feedrate = feedrate;
@@ -2190,9 +2187,9 @@ bool calibrate_z_auto()
 #endif //TMC2130
 
 #ifdef TMC2130
-void homeaxis(int axis, uint8_t cnt, uint8_t* pstep)
+bool homeaxis(int axis, bool doError, uint8_t cnt, uint8_t* pstep)
 #else
-void homeaxis(int axis, uint8_t cnt)
+bool homeaxis(int axis, bool doError, uint8_t cnt)
 #endif //TMC2130
 {
 	bool endstops_enabled  = enable_endstops(true); //RP: endstops should be allways enabled durring homing
@@ -2307,8 +2304,10 @@ void homeaxis(int axis, uint8_t cnt)
 #ifdef TMC2130
 		if (READ(Z_TMC2130_DIAG) != 0) { //Z crash
 			FORCE_HIGH_POWER_END;
-			kill(_T(MSG_BED_LEVELING_FAILED_POINT_LOW));
-			return; 
+			if (doError) kill(_T(MSG_BED_LEVELING_FAILED_POINT_LOW));
+            current_position[axis] = -5; //assume that nozzle crashed into bed
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+			return 0; 
 		}
 #endif //TMC2130
         current_position[axis] = 0;
@@ -2323,8 +2322,10 @@ void homeaxis(int axis, uint8_t cnt)
 #ifdef TMC2130
 		if (READ(Z_TMC2130_DIAG) != 0) { //Z crash
 			FORCE_HIGH_POWER_END;
-			kill(_T(MSG_BED_LEVELING_FAILED_POINT_LOW));
-			return; 
+			if (doError) kill(_T(MSG_BED_LEVELING_FAILED_POINT_LOW));
+            current_position[axis] = -5; //assume that nozzle crashed into bed
+            plan_set_position(current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS], current_position[E_AXIS]);
+			return 0; 
 		}
 #endif //TMC2130
         axis_is_at_home(axis);
@@ -2337,6 +2338,7 @@ void homeaxis(int axis, uint8_t cnt)
 #endif	
     }
     enable_endstops(endstops_enabled);
+    return 1;
 }
 
 /**/
@@ -9484,10 +9486,15 @@ static void handleSafetyTimer()
 }
 #endif //SAFETYTIMER
 
+#define FS_CHECK_COUNT 15
 void manage_inactivity(bool ignore_stepper_queue/*=false*/) //default argument set in Marlin.h
 {
-bool bInhibitFlag;
 #ifdef FILAMENT_SENSOR
+bool bInhibitFlag;
+#ifdef IR_SENSOR_ANALOG
+static uint8_t nFSCheckCount=0;
+#endif // IR_SENSOR_ANALOG
+
 	if (mmu_enabled == false)
 	{
 //-//		if (mcode_in_progress != 600) //M600 not in progress
@@ -9496,11 +9503,35 @@ bool bInhibitFlag;
 #endif // PAT9125
 #ifdef IR_SENSOR
           bInhibitFlag=(menu_menu==lcd_menu_show_sensors_state); // Support::SensorInfo menu active
+#ifdef IR_SENSOR_ANALOG
+          bInhibitFlag=bInhibitFlag||bMenuFSDetect; // Settings::HWsetup::FSdetect menu active
+#endif // IR_SENSOR_ANALOG
 #endif // IR_SENSOR
           if ((mcode_in_progress != 600) && (eFilamentAction != FilamentAction::AutoLoad) && (!bInhibitFlag)) //M600 not in progress, preHeat @ autoLoad menu not active, Support::ExtruderInfo/SensorInfo menu not active
 		{
 			if (!moves_planned() && !IS_SD_PRINTING && !is_usb_printing && (lcd_commands_type != LcdCommands::Layer1Cal) && ! eeprom_read_byte((uint8_t*)EEPROM_WIZARD_ACTIVE))
 			{
+#ifdef IR_SENSOR_ANALOG
+                    bool bTemp=current_voltage_raw_IR>IRsensor_Hmin_TRESHOLD;
+                    bTemp=bTemp&&current_voltage_raw_IR<IRsensor_Hopen_TRESHOLD;
+                    bTemp=bTemp&&(!CHECK_ALL_HEATERS);
+                    bTemp=bTemp&&(menu_menu==lcd_status_screen);
+                    bTemp=bTemp&&((oFsensorPCB==ClFsensorPCB::_Old)||(oFsensorPCB==ClFsensorPCB::_Undef));
+                    bTemp=bTemp&&fsensor_enabled;
+                    if(bTemp)
+                    {
+                         nFSCheckCount++;
+                         if(nFSCheckCount>FS_CHECK_COUNT)
+                         {
+                              nFSCheckCount=0;    // not necessary
+                              oFsensorPCB=ClFsensorPCB::_Rev03b;
+                              eeprom_update_byte((uint8_t*)EEPROM_FSENSOR_PCB,(uint8_t)oFsensorPCB);
+                              printf_IRSensorAnalogBoardChange(true);
+                              lcd_setstatuspgm(_i("FS rev. 03b or newer"));
+                         }
+                    }
+                    else nFSCheckCount=0;
+#endif // IR_SENSOR_ANALOG
 				if (fsensor_check_autoload())
 				{
 #ifdef PAT9125
