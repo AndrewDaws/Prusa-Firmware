@@ -59,7 +59,9 @@ int clock_interval = 0;
 
 static void lcd_sd_updir();
 static void lcd_mesh_bed_leveling_settings();
+#ifdef LCD_BL_PIN
 static void lcd_backlight_menu();
+#endif
 
 int8_t ReInitLCD = 0;
 uint8_t scrollstuff = 0;
@@ -123,7 +125,9 @@ static void lcd_tune_menu();
 static void lcd_settings_menu();
 static void lcd_calibration_menu();
 static void lcd_control_temperature_menu();
+#ifdef TMC2130
 static void lcd_settings_linearity_correction_menu_save();
+#endif
 static void prusa_stat_printerstatus(int _status);
 static void prusa_stat_farm_number();
 static void prusa_stat_diameter();
@@ -160,7 +164,6 @@ static void lcd_selftest_v();
 #ifdef TMC2130
 static void reset_crash_det(unsigned char axis);
 static bool lcd_selfcheck_axis_sg(unsigned char axis);
-static bool lcd_selfcheck_axis(int _axis, int _travel);
 #else
 static bool lcd_selfcheck_axis(int _axis, int _travel);
 static bool lcd_selfcheck_pulleys(int axis);
@@ -248,7 +251,9 @@ static void fil_unload_menu();
 #endif // SNMM || SNMM_V2
 static void lcd_disable_farm_mode();
 static void lcd_set_fan_check();
+#ifdef MMU_HAS_CUTTER
 static void lcd_cutter_enabled();
+#endif
 #ifdef SNMM
 static char snmm_stop_print_menu();
 #endif //SNMM
@@ -2090,7 +2095,7 @@ if(lcd_clicked())
           {
           case FilamentAction::AutoLoad:
                eFilamentAction=FilamentAction::None; // i.e. non-autoLoad
-               // no break
+               // FALLTHRU
           case FilamentAction::Load:
                loading_flag=true;
                enquecommand_P(PSTR("M701"));      // load filament
@@ -2201,14 +2206,21 @@ void mFilamentItem(uint16_t nTemp, uint16_t nTempBed)
     }
     else
     {
-        if (!bFilamentWaitingFlag)
+        if (!bFilamentWaitingFlag || lcd_draw_update)
         {
-            // First run after the filament preheat selection:
-            // setup the fixed LCD parts and raise Z as we wait
+            // First entry from another menu OR first run after the filament preheat selection. Use
+            // bFilamentWaitingFlag to distinguish: this flag is reset exactly once when entering
+            // the menu and is used to raise the carriage *once*. In other cases, the LCD has been
+            // modified elsewhere and needs to be redrawn in full.
+
+            // reset bFilamentWaitingFlag immediately to avoid re-entry from raise_z_above()!
+            bool once = !bFilamentWaitingFlag;
             bFilamentWaitingFlag = true;
 
-            lcd_clear();
+            // also force-enable lcd_draw_update (might be 0 when called from outside a menu)
             lcd_draw_update = 1;
+
+            lcd_clear();
             lcd_puts_at_P(0, 3, _T(MSG_CANCEL)); ////MSG_CANCEL
 
             lcd_set_cursor(0, 1);
@@ -2218,12 +2230,12 @@ void mFilamentItem(uint16_t nTemp, uint16_t nTempBed)
             case FilamentAction::AutoLoad:
             case FilamentAction::MmuLoad:
                 lcd_puts_P(_i("Preheating to load")); ////MSG_PREHEATING_TO_LOAD c=20
-                raise_z_above(MIN_Z_FOR_LOAD);
+                if (once) raise_z_above(MIN_Z_FOR_LOAD);
                 break;
             case FilamentAction::UnLoad:
             case FilamentAction::MmuUnLoad:
                 lcd_puts_P(_i("Preheating to unload")); ////MSG_PREHEATING_TO_UNLOAD c=20
-                raise_z_above(MIN_Z_FOR_UNLOAD);
+                if (once) raise_z_above(MIN_Z_FOR_UNLOAD);
                 break;
             case FilamentAction::MmuEject:
                 lcd_puts_P(_i("Preheating to eject")); ////MSG_PREHEATING_TO_EJECT c=20
@@ -5999,7 +6011,7 @@ char reset_menu() {
     int8_t enc_dif = 0;
 	char cursor_pos = 0;
 
-    const char *const item[items_no] PROGMEM = {PSTR("Language"), PSTR("Statistics"), PSTR("Shipping prep"), PSTR("Service prep"), PSTR("All Data")
+    const char *const item[items_no] = {PSTR("Language"), PSTR("Statistics"), PSTR("Shipping prep"), PSTR("Service prep"), PSTR("All Data")
 #ifdef SNMM
     , PSTR("Bowden length")
 #endif
@@ -7134,8 +7146,8 @@ void lcd_sdcard_menu()
 			_md->fileCnt = card.getnrfilenames();
 			_md->sdSort = eeprom_read_byte((uint8_t*)EEPROM_SD_SORT);
 			_md->menuState = _standard;
-			// FALLTHRU
 		}
+		// FALLTHRU
 		case _standard: //normal menu structure.
 		{
 			if (!_md->lcd_scrollTimer.running()) //if the timer is not running, then the menu state was just switched, so redraw the screen.
@@ -7400,7 +7412,7 @@ bool lcd_selftest()
 			break;
 		case FanCheck::SwappedFan:
 			_swapped_fan = true;
-			// no break
+			// FALLTHRU
 		default:
 			_result = true;
 			break;
@@ -7423,7 +7435,7 @@ bool lcd_selftest()
 			break;
 		case FanCheck::SwappedFan:
 			_swapped_fan = true;
-			// no break
+			// FALLTHRU
 		default:
 			_result = true;
 			break;

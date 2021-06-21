@@ -454,8 +454,11 @@ static void print_time_remaining_init();
 static void wait_for_heater(long codenum, uint8_t extruder);
 static void gcode_G28(bool home_x_axis, bool home_y_axis, bool home_z_axis);
 static void gcode_M105(uint8_t extruder);
+
+#ifndef PINDA_THERMISTOR
 static void temp_compensation_start();
 static void temp_compensation_apply();
+#endif
 
 static bool get_PRUSA_SN(char* SN);
 
@@ -741,7 +744,7 @@ static void factory_reset(char level)
 
 	case 2: // Level 2: Prepare for shipping
 		factory_reset_stats();
-		// [[fallthrough]] // there is no break intentionally
+		// FALLTHRU
 
 	case 3: // Level 3: Preparation after being serviced
 		// Force language selection at the next boot up.
@@ -1727,6 +1730,32 @@ void serial_read_stream() {
     }
 }
 
+
+/**
+ * Output autoreport values according to features requested in M155
+ */
+#if defined(AUTO_REPORT)
+static void host_autoreport()
+{
+    if (autoReportFeatures.TimerExpired())
+    {
+        if(autoReportFeatures.Temp()){
+            gcode_M105(active_extruder);
+        }
+        if(autoReportFeatures.Pos()){
+            gcode_M114();
+        }
+#if defined(AUTO_REPORT) && (defined(FANCHECK) && (((defined(TACH_0) && (TACH_0 >-1)) || (defined(TACH_1) && (TACH_1 > -1)))))
+        if(autoReportFeatures.Fans()){
+            gcode_M123();
+        }
+#endif //AUTO_REPORT and (FANCHECK and TACH_0 or TACH_1)
+        autoReportFeatures.TimerStart();
+    }
+}
+#endif //AUTO_REPORT
+
+
 /**
 * Output a "busy" message at regular intervals
 * while the machine is not accepting commands.
@@ -1737,27 +1766,6 @@ void host_keepalive() {
 #endif //HOST_KEEPALIVE_FEATURE
   if (farm_mode) return;
   long ms = _millis();
-
-#if defined(AUTO_REPORT)
-  {
-    if (autoReportFeatures.TimerExpired())
-    {
-      if(autoReportFeatures.Temp()){
-        gcode_M105(active_extruder);
-      }
-      if(autoReportFeatures.Pos()){
-        gcode_M114();
-      }
- #if defined(AUTO_REPORT) && (defined(FANCHECK) && (((defined(TACH_0) && (TACH_0 >-1)) || (defined(TACH_1) && (TACH_1 > -1)))))      
-      if(autoReportFeatures.Fans()){
-        gcode_M123();
-      }
-#endif //AUTO_REPORT and (FANCHECK and TACH_0 or TACH_1)
-     autoReportFeatures.TimerStart();
-    }
-  }
-#endif //AUTO_REPORT
-
 
   if (host_keepalive_interval && busy_state != NOT_BUSY) {
     if ((ms - prev_busy_signal_ms) < (long)(1000L * host_keepalive_interval)) return;
@@ -3493,11 +3501,13 @@ bool gcode_M45(bool onlyZ, int8_t verbosity_level)
 				bool result = sample_mesh_and_store_reference();
 				if (result)
 				{
-					if (calibration_status() == CALIBRATION_STATUS_Z_CALIBRATION)
-						// Shipped, the nozzle height has been set already. The user can start printing now.
-						calibration_status_store(CALIBRATION_STATUS_CALIBRATED);
-						final_result = true;
-					// babystep_apply();
+                    if (calibration_status() == CALIBRATION_STATUS_Z_CALIBRATION)
+                    {
+                        // Shipped, the nozzle height has been set already. The user can start printing now.
+                        calibration_status_store(CALIBRATION_STATUS_CALIBRATED);
+                    }
+                    final_result = true;
+                    // babystep_apply();
 				}
 			}
 			else
@@ -8841,7 +8851,7 @@ Sigma_Exit:
       bool load_to_nozzle = false;
       for (index = 1; *(strchr_pointer + index) == ' ' || *(strchr_pointer + index) == '\t'; index++);
 
-	  *(strchr_pointer + index) = tolower(*(strchr_pointer + index));
+      *(strchr_pointer + index) = tolower(*(strchr_pointer + index));
 
       if ((*(strchr_pointer + index) < '0' || *(strchr_pointer + index) > '4') && *(strchr_pointer + index) != '?' && *(strchr_pointer + index) != 'x' && *(strchr_pointer + index) != 'c') {
           SERIAL_ECHOLNPGM("Invalid T code.");
@@ -9901,6 +9911,10 @@ if(0)
   #endif
   check_axes_activity();
   mmu_loop();
+#if defined(AUTO_REPORT)
+  host_autoreport();
+#endif //AUTO_REPORT
+  host_keepalive();
 }
 
 void kill(const char *full_screen_message, unsigned char id)
