@@ -1102,10 +1102,10 @@ void setup()
 	setup_powerhold();
 
 	farm_mode = eeprom_read_byte((uint8_t*)EEPROM_FARM_MODE); 
-	if (farm_mode == 0xFF) 
+	if (farm_mode == 0xFF) {
 		farm_mode = false; //if farm_mode has not been stored to eeprom yet and farm number is set to zero or EEPROM is fresh, deactivate farm mode
-	if (farm_mode)
-	{
+		eeprom_update_byte((uint8_t*)EEPROM_FARM_MODE, farm_mode);
+	} else if (farm_mode) {
 		no_response = true; //we need confirmation by recieving PRUSA thx
 		important_status = 8;
 		prusa_statistics(8);
@@ -1117,9 +1117,8 @@ void setup()
 		//disabled filament autoload (PFW360)
 		fsensor_autoload_set(false);
 #endif //FILAMENT_SENSOR
-          // ~ FanCheck -> on
-          if(!(eeprom_read_byte((uint8_t*)EEPROM_FAN_CHECK_ENABLED)))
-               eeprom_update_byte((unsigned char *)EEPROM_FAN_CHECK_ENABLED,true);
+		// ~ FanCheck -> on
+		eeprom_update_byte((uint8_t*)EEPROM_FAN_CHECK_ENABLED, true);
 	}
 
 #ifdef TMC2130
@@ -1441,12 +1440,11 @@ void setup()
     enable_z();
 #endif
 
-	farm_mode = eeprom_read_byte((uint8_t*)EEPROM_FARM_MODE);
-	if (farm_mode == 0xFF) farm_mode = false; //if farm_mode has not been stored to eeprom yet and farm number is set to zero or EEPROM is fresh, deactivate farm mode
-	if (farm_mode)
-	{
-		prusa_statistics(8);
-	}
+    if (farm_mode) {
+        // The farm monitoring SW may accidentally expect 
+        // 2 messages of "printer started" to consider a printer working.
+        prusa_statistics(8);
+    }
 
 	// Enable Toshiba FlashAir SD card / WiFi enahanced card.
 	card.ToshibaFlashAir_enable(eeprom_read_byte((unsigned char*)EEPROM_TOSHIBA_FLASH_AIR_COMPATIBLITY) == 1);
@@ -8803,9 +8801,13 @@ Sigma_Exit:
 			if(code_seen(axis_codes[i]))
 			{
 				uint16_t res_new = code_value();
+#ifdef ALLOW_ALL_MRES
+				bool res_valid = res_new > 0 && res_new <= 256 && !(res_new & (res_new - 1)); // must be a power of two
+#else
 				bool res_valid = (res_new == 8) || (res_new == 16) || (res_new == 32); // resolutions valid for all axis
 				res_valid |= (i != E_AXIS) && ((res_new == 1) || (res_new == 2) || (res_new == 4)); // resolutions valid for X Y Z only
 				res_valid |= (i == E_AXIS) && ((res_new == 64) || (res_new == 128)); // resolutions valid for E only
+#endif
 				if (res_valid)
 				{
 					st_synchronize();
