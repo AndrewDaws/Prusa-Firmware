@@ -6952,6 +6952,7 @@ Sigma_Exit:
           }
         }
       }
+      reset_acceleration_rates();
       break;
 
     /*!
@@ -7766,23 +7767,18 @@ Sigma_Exit:
     See also <a href="https://reprap.org/wiki/PID_Tuning">PID Tuning.</a>
     #### Usage
     
-        M301 [ P | I | D | C ]
+        M301 [ P | I | D ]
     
     #### Parameters
     - `P` - proportional (Kp)
     - `I` - integral (Ki)
     - `D` - derivative (Kd)
-    - `C` - heating power=Kc*(e_speed0)  
     */
     case 301:
       {
         if(code_seen('P')) cs.Kp = code_value();
         if(code_seen('I')) cs.Ki = scalePID_i(code_value());
         if(code_seen('D')) cs.Kd = scalePID_d(code_value());
-
-        #ifdef PID_ADD_EXTRUSION_RATE
-        if(code_seen('C')) Kc = code_value();
-        #endif
 
         updatePID();
         SERIAL_PROTOCOLRPGM(MSG_OK);
@@ -7792,11 +7788,6 @@ Sigma_Exit:
         SERIAL_PROTOCOL(unscalePID_i(cs.Ki));
         SERIAL_PROTOCOLPGM(" d:");
         SERIAL_PROTOCOL(unscalePID_d(cs.Kd));
-        #ifdef PID_ADD_EXTRUSION_RATE
-        SERIAL_PROTOCOLPGM(" c:");
-        //Kc does not have scaling applied above, or in resetting defaults
-        SERIAL_PROTOCOL(Kc);
-        #endif
         SERIAL_PROTOCOLLN();
       }
       break;
@@ -8789,6 +8780,7 @@ Sigma_Exit:
 				}
 			}
 		}
+		reset_acceleration_rates();
 	#else //TMC2130
       #if defined(X_MS1_PIN) && X_MS1_PIN > -1
         if(code_seen('S')) for(int i=0;i<=4;i++) microstep_mode(i,code_value());
