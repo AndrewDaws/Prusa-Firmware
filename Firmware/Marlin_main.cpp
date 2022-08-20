@@ -1940,7 +1940,7 @@ void loop()
 }
   //check heater every n milliseconds
   manage_heater();
-  isPrintPaused ? manage_inactivity(true) : manage_inactivity(false);
+  manage_inactivity(isPrintPaused);
   checkHitEndstops();
   lcd_update(0);
 #ifdef TMC2130
@@ -3812,14 +3812,17 @@ void gcode_M701()
 		fsensor_oq_meassure_start(40);
 #endif //FSENSOR_QUALITY
 
+        const int feed_mm_before_raising = 30;
+        static_assert(feed_mm_before_raising <= FILAMENTCHANGE_FIRSTFEED);
+
 		lcd_setstatuspgm(_T(MSG_LOADING_FILAMENT));
-		current_position[E_AXIS] += 40;
-		plan_buffer_line_curposXYZE(400 / 60); //fast sequence
+		current_position[E_AXIS] += FILAMENTCHANGE_FIRSTFEED - feed_mm_before_raising;
+		plan_buffer_line_curposXYZE(FILAMENTCHANGE_EFEED_FIRST); //fast sequence
 		st_synchronize();
 
         raise_z_above(MIN_Z_FOR_LOAD, false);
-		current_position[E_AXIS] += 30;
-		plan_buffer_line_curposXYZE(400 / 60); //fast sequence
+		current_position[E_AXIS] += feed_mm_before_raising;
+		plan_buffer_line_curposXYZE(FILAMENTCHANGE_EFEED_FIRST); //fast sequence
 		
 		load_filament_final_feed(); //slow sequence
 		st_synchronize();
@@ -4248,7 +4251,7 @@ void process_commands()
     */
 
     else if (code_seen_P(PSTR("M0")) || code_seen_P(PSTR("M1 "))) {// M0 and M1 - (Un)conditional stop - Wait for user button press on LCD
-        char *src = strchr_pointer + 2;
+        const char *src = strchr_pointer + 2;
         codenum = 0;
         bool hasP = false, hasS = false;
         if (code_seen('P')) {
@@ -4806,11 +4809,11 @@ eeprom_update_word((uint16_t*)EEPROM_NOZZLE_DIAMETER_uM,0xFFFF);
       long home_z_value = 0;
       // Which axes should be homed?
       bool home_x = code_seen(axis_codes[X_AXIS]);
-      home_x_value = code_value_long();
+      if (home_x) home_x_value = code_value_long();
       bool home_y = code_seen(axis_codes[Y_AXIS]);
-      home_y_value = code_value_long();
+      if (home_y) home_y_value = code_value_long();
       bool home_z = code_seen(axis_codes[Z_AXIS]);
-      home_z_value = code_value_long();
+      if (home_z) home_z_value = code_value_long();
       bool without_mbl = code_seen('W');
       // calibrate?
 #ifdef TMC2130
@@ -5675,6 +5678,7 @@ eeprom_update_word((uint16_t*)EEPROM_NOZZLE_DIAMETER_uM,0xFFFF);
           {
               // A new print has started from scratch, reset stats
               failstats_reset_print();
+              sdpos_atomic = 0;
 #ifndef LA_NOCOMPAT
               la10c_reset();
 #endif
@@ -5773,7 +5777,7 @@ eeprom_update_word((uint16_t*)EEPROM_NOZZLE_DIAMETER_uM,0xFFFF);
       }
       starpos = (strchr(strchr_pointer + 4,'*'));
 
-      char* namestartpos = (strchr(strchr_pointer + 4,'!'));   //find ! to indicate filename string start.
+      const char* namestartpos = (strchr(strchr_pointer + 4,'!'));   //find ! to indicate filename string start.
       if(namestartpos==NULL)
       {
         namestartpos=strchr_pointer + 4; //default name position, 4 letters after the M
@@ -5802,6 +5806,7 @@ eeprom_update_word((uint16_t*)EEPROM_NOZZLE_DIAMETER_uM,0xFFFF);
             {
                 // A new print has started from scratch, reset stats
                 failstats_reset_print();
+                sdpos_atomic = 0;
 #ifndef LA_NOCOMPAT
                 la10c_reset();
 #endif
