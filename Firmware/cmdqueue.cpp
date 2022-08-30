@@ -1,6 +1,7 @@
 #include "cmdqueue.h"
 #include "cardreader.h"
 #include "ultralcd.h"
+#include "Prusa_farm.h"
 
 // Reserve BUFSIZE lines of length MAX_CMD_SIZE plus CMDBUFFER_RESERVE_FRONT.
 char cmdbuffer[BUFSIZE * (MAX_CMD_SIZE + 1) + CMDBUFFER_RESERVE_FRONT];
@@ -366,16 +367,6 @@ void repeatcommand_front()
 {
     cmdbuffer_front_already_processed = true;
 } 
-
-void proc_commands() {
-	if (buflen)
-	{
-		process_commands();
-		if (!cmdbuffer_front_already_processed)
-			cmdqueue_pop_front();
-		cmdbuffer_front_already_processed = false;
-	}
-}
 
 void get_command()
 {
