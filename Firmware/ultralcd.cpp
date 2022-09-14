@@ -1413,7 +1413,7 @@ static void lcd_menu_temperatures()
     lcd_menu_temperatures_line( _i("Ambient"), (int)current_temperature_ambient );  ////MSG_AMBIENT c=14
 #endif //AMBIENT_THERMISTOR
 #ifdef PINDA_THERMISTOR
-    lcd_menu_temperatures_line( _T(MSG_PINDA), (int)current_temperature_pinda );  ////MSG_PINDA
+    lcd_menu_temperatures_line(MSG_PINDA, (int)current_temperature_pinda );  ////MSG_PINDA
 #endif //PINDA_THERMISTOR
     menu_back_if_clicked();
 }
@@ -2803,7 +2803,7 @@ void lcd_adjust_z() {
 
   lcd_clear();
   lcd_set_cursor(0, 0);
-  lcd_puts_P(_i("Auto adjust Z?"));////MSG_ADJUSTZ
+  lcd_puts_P(_n("Auto adjust Z?"));////MSG_ADJUSTZ
   lcd_set_cursor(1, 1);
   lcd_puts_P(_T(MSG_YES));
 
@@ -3443,8 +3443,7 @@ static void lcd_show_sensors_state()
 	{
 		finda_state = mmu_finda;
 	}
-	//lcd_puts_at_P(0, 0, _i("Sensor state"));
-	lcd_puts_at_P(0, 0, _T(MSG_PINDA));
+	lcd_puts_at_P(0, 0, MSG_PINDA);
 	lcd_set_cursor(LCD_WIDTH - 14, 0);
 	lcd_print_state(pinda_state);
 	
@@ -3457,7 +3456,7 @@ static void lcd_show_sensors_state()
 	
 	if (ir_sensor_detected) {
 		idler_state = !READ(IR_SENSOR_PIN);
-		lcd_puts_at_P(0, 1, _i("Fil. sensor"));
+		lcd_puts_at_P(0, 1, _T(MSG_FSENSOR));
 		lcd_set_cursor(LCD_WIDTH - 3, 1);
 		lcd_print_state(idler_state);
 	}
@@ -3685,7 +3684,7 @@ static void lcd_community_language_menu()
 {
 	MENU_BEGIN();
 	uint8_t cnt = lang_get_count();
-	MENU_ITEM_BACK_P(_i("Select language")); //Back to previous Menu
+	MENU_ITEM_BACK_P(_T(MSG_SELECT_LANGUAGE)); //Back to previous Menu
 	for (int i = 8; i < cnt; i++) //all community languages
 		if (menu_item_text_P(lang_get_name_by_code(lang_get_code(i))))
 		{
@@ -4282,15 +4281,15 @@ static void settingsAutoDeplete()
     {
         if (!fsensor_enabled)
         {
-            MENU_ITEM_TOGGLE_P(_T(MSG_AUTO_DEPLETE), _T(MSG_NA), NULL);
+            MENU_ITEM_TOGGLE_P(MSG_AUTO_DEPLETE, _T(MSG_NA), NULL);
         }
         else if (lcd_autoDeplete)
         {
-            MENU_ITEM_TOGGLE_P(_T(MSG_AUTO_DEPLETE), _T(MSG_ON), auto_deplete_switch);
+            MENU_ITEM_TOGGLE_P(MSG_AUTO_DEPLETE, _T(MSG_ON), auto_deplete_switch);
         }
         else
         {
-            MENU_ITEM_TOGGLE_P(_T(MSG_AUTO_DEPLETE), _T(MSG_OFF), auto_deplete_switch);
+            MENU_ITEM_TOGGLE_P(MSG_AUTO_DEPLETE, _T(MSG_OFF), auto_deplete_switch);
         }
     }
 }
@@ -4314,7 +4313,7 @@ static void settingsCutter()
 #ifdef MMU_ALWAYS_CUT
         else if (EEPROM_MMU_CUTTER_ENABLED_always == eeprom_read_byte((uint8_t*)EEPROM_MMU_CUTTER_ENABLED))
         {
-            MENU_ITEM_TOGGLE_P(_T(MSG_CUTTER), _i("Always"), lcd_cutter_enabled);
+            MENU_ITEM_TOGGLE_P(_T(MSG_CUTTER), _T(MSG_ALWAYS), lcd_cutter_enabled);
         }
 #endif
         else
@@ -4401,7 +4400,7 @@ while (0)
 do\
 {\
     if (card.ToshibaFlashAir_isEnabled())\
-        MENU_ITEM_TOGGLE_P(_T(MSG_SD_CARD), _T(MSG_TOSHIBA_FLASH_AIR_COMPATIBILITY), lcd_toshiba_flash_air_compatibility_toggle);\
+        MENU_ITEM_TOGGLE_P(_T(MSG_SD_CARD), MSG_TOSHIBA_FLASH_AIR_COMPATIBILITY, lcd_toshiba_flash_air_compatibility_toggle);\
     else\
         MENU_ITEM_TOGGLE_P(_T(MSG_SD_CARD), _T(MSG_NORMAL), lcd_toshiba_flash_air_compatibility_toggle);\
 \
@@ -4420,7 +4419,7 @@ while (0)
 do\
 {\
     if (card.ToshibaFlashAir_isEnabled())\
-        MENU_ITEM_TOGGLE_P(_T(MSG_SD_CARD), _T(MSG_TOSHIBA_FLASH_AIR_COMPATIBILITY), lcd_toshiba_flash_air_compatibility_toggle);\
+        MENU_ITEM_TOGGLE_P(_T(MSG_SD_CARD), MSG_TOSHIBA_FLASH_AIR_COMPATIBILITY, lcd_toshiba_flash_air_compatibility_toggle);\
     else\
         MENU_ITEM_TOGGLE_P(_T(MSG_SD_CARD), _T(MSG_NORMAL), lcd_toshiba_flash_air_compatibility_toggle);\
 }\
@@ -4434,16 +4433,16 @@ do\
     switch(e_mbl_type)\
     {\
     case e_MBL_FAST:\
-        MENU_ITEM_FUNCTION_P(_i("Mode    [Fast]"),mbl_mode_set);\ 
+        MENU_ITEM_FUNCTION_P(_n("Mode    [Fast]"),mbl_mode_set);\
          break; \
     case e_MBL_OPTIMAL:\
-	    MENU_ITEM_FUNCTION_P(_i("Mode [Optimal]"), mbl_mode_set); \ 
+	    MENU_ITEM_FUNCTION_P(_n("Mode [Optimal]"), mbl_mode_set); \
 	     break; \
     case e_MBL_PREC:\
-	     MENU_ITEM_FUNCTION_P(_i("Mode [Precise]"), mbl_mode_set); \
+	     MENU_ITEM_FUNCTION_P(_n("Mode [Precise]"), mbl_mode_set); \
 	     break; \
     default:\
-	     MENU_ITEM_FUNCTION_P(_i("Mode [Optimal]"), mbl_mode_set); \
+	     MENU_ITEM_FUNCTION_P(_n("Mode [Optimal]"), mbl_mode_set); \
 	     break; \
     }\
 }\
@@ -4620,16 +4619,16 @@ do\
     switch(oCheckVersion)\
          {\
          case ClCheckVersion::_None:\
-              MENU_ITEM_TOGGLE_P(_T(MSG_FIRMWARE), _T(MSG_NONE), lcd_check_version_set);\
+              MENU_ITEM_TOGGLE_P(MSG_FIRMWARE, _T(MSG_NONE), lcd_check_version_set);\
               break;\
          case ClCheckVersion::_Warn:\
-              MENU_ITEM_TOGGLE_P(_T(MSG_FIRMWARE), _T(MSG_WARN), lcd_check_version_set);\
+              MENU_ITEM_TOGGLE_P(MSG_FIRMWARE, _T(MSG_WARN), lcd_check_version_set);\
               break;\
          case ClCheckVersion::_Strict:\
-              MENU_ITEM_TOGGLE_P(_T(MSG_FIRMWARE), _T(MSG_STRICT), lcd_check_version_set);\
+              MENU_ITEM_TOGGLE_P(MSG_FIRMWARE, _T(MSG_STRICT), lcd_check_version_set);\
               break;\
          default:\
-              MENU_ITEM_TOGGLE_P(_T(MSG_FIRMWARE), _T(MSG_NONE), lcd_check_version_set);\
+              MENU_ITEM_TOGGLE_P(MSG_FIRMWARE, _T(MSG_NONE), lcd_check_version_set);\
          }\
 }\
 while (0)
@@ -4847,7 +4846,7 @@ static void lcd_settings_menu()
 		MENU_ITEM_SUBMENU_P(_T(MSG_BABYSTEP_Z), lcd_babystep_z);
 
 #if (LANG_MODE != 0)
-	MENU_ITEM_SUBMENU_P(_i("Select language"), lcd_language_menu);////MSG_LANGUAGE_SELECT c=18
+	MENU_ITEM_SUBMENU_P(_T(MSG_SELECT_LANGUAGE), lcd_language_menu);
 #endif //(LANG_MODE != 0)
 
 	SETTINGS_SD;
@@ -5544,14 +5543,14 @@ static void lcd_main_menu()
                 MENU_ITEM_SUBMENU_P(_T(MSG_CARD_MENU), lcd_sdcard_menu);
             }
 #if SDCARDDETECT < 1
-        MENU_ITEM_GCODE_P(_i("Change SD card"), PSTR("M21"));  // SD-card changed by user////MSG_CNG_SDCARD
+        MENU_ITEM_GCODE_P(_i("Change SD card"), PSTR("M21"));  // SD-card changed by user////MSG_CNG_SDCARD c=18
 #endif //SDCARDDETECT
         }
     } else {
         bMain=true;                                   // flag (i.e. 'fake parameter') for 'lcd_sdcard_menu()' function
         MENU_ITEM_SUBMENU_P(_i("No SD card"), lcd_sdcard_menu);////MSG_NO_CARD c=18
 #if SDCARDDETECT < 1
-        MENU_ITEM_GCODE_P(_i("Init. SD card"), PSTR("M21")); // Manually initialize the SD-card via user interface////MSG_INIT_SDCARD
+        MENU_ITEM_GCODE_P(_i("Init. SD card"), PSTR("M21")); // Manually initialize the SD-card via user interface////MSG_INIT_SDCARD c=18
 #endif //SDCARDDETECT
     }
 #endif //SDSUPPORT
@@ -5602,7 +5601,7 @@ static void lcd_main_menu()
     }
     MENU_ITEM_SUBMENU_P(_i("Support"), lcd_support_menu);////MSG_SUPPORT c=18
 #ifdef LCD_TEST
-    MENU_ITEM_SUBMENU_P(_i("XFLASH init"), lcd_test_menu);////MSG_XFLASH
+    MENU_ITEM_SUBMENU_P(_i("XFLASH init"), lcd_test_menu);////MSG_XFLASH c=18
 #endif //LCD_TEST
 
     MENU_END();
@@ -5891,10 +5890,10 @@ static void lcd_control_temperature_menu()
   MENU_ITEM_EDIT_int3_P(_T(MSG_NOZZLE), &target_temperature[0], 0, HEATER_0_MAXTEMP - 10);
 #endif
 #if TEMP_SENSOR_1 != 0
-  MENU_ITEM_EDIT_int3_P(_i("Nozzle2"), &target_temperature[1], 0, HEATER_1_MAXTEMP - 10);////MSG_NOZZLE1
+  MENU_ITEM_EDIT_int3_P(_n("Nozzle2"), &target_temperature[1], 0, HEATER_1_MAXTEMP - 10);
 #endif
 #if TEMP_SENSOR_2 != 0
-  MENU_ITEM_EDIT_int3_P(_i("Nozzle3"), &target_temperature[2], 0, HEATER_2_MAXTEMP - 10);////MSG_NOZZLE2
+  MENU_ITEM_EDIT_int3_P(_n("Nozzle3"), &target_temperature[2], 0, HEATER_2_MAXTEMP - 10);
 #endif
 #if TEMP_SENSOR_BED != 0
   MENU_ITEM_EDIT_int3_P(_T(MSG_BED), &target_temperature_bed, 0, BED_MAXTEMP - 3);
@@ -5903,9 +5902,9 @@ static void lcd_control_temperature_menu()
 #if defined AUTOTEMP && (TEMP_SENSOR_0 != 0)
 //MENU_ITEM_EDIT removed, following code must be redesigned if AUTOTEMP enabled
   MENU_ITEM_EDIT(bool, MSG_AUTOTEMP, &autotemp_enabled);
-  MENU_ITEM_EDIT(float3, _i(" \xdf Min"), &autotemp_min, 0, HEATER_0_MAXTEMP - 10);////MSG_MIN
-  MENU_ITEM_EDIT(float3, _i(" \xdf Max"), &autotemp_max, 0, HEATER_0_MAXTEMP - 10);////MSG_MAX
-  MENU_ITEM_EDIT(float32, _i(" \xdf Fact"), &autotemp_factor, 0.0, 1.0);////MSG_FACTOR
+  MENU_ITEM_EDIT(float3, _n(" \xdf Min"), &autotemp_min, 0, HEATER_0_MAXTEMP - 10);
+  MENU_ITEM_EDIT(float3, _n(" \xdf Max"), &autotemp_max, 0, HEATER_0_MAXTEMP - 10);
+  MENU_ITEM_EDIT(float32, _n(" \xdf Fact"), &autotemp_factor, 0.0, 1.0);
 #endif
 
   MENU_END();
